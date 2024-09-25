@@ -5,15 +5,20 @@
 #include <Adafruit_SPIFlash.h>    // SPI / QSPI flash library
 #include <Adafruit_ImageReader.h> // Image-reading functions
 
+#include "classes/button.h" // custom button object
+
 #define USE_SD_CARD
 #define SD_CS    10  // SD card select pin
 
-// Use dedicated hardware SPI pins
+// displays
 Adafruit_ST7789 primary = Adafruit_ST7789(TFT_CS, TFT_DC, TFT_RST);
-// write to the external display
 Adafruit_ST7789 secondary = Adafruit_ST7789(T5, T6, T9);
-
+// onboard flash
+Adafruit_FlashTransport_ESP32 flashTransport;
+Adafruit_SPIFlash onboardFlash(&flashTransport);
+// external SD card
 SdFat                SD;         // SD card filesystem
+// image file reader (might need to read from different places. Create as needed?)
 Adafruit_ImageReader reader(SD); // Image-reader object, pass in SD filesys
 
 Adafruit_Image       img;        // An image loaded into RAM
@@ -22,16 +27,31 @@ int32_t              width  = 0, // BMP image dimensions
 
 csd_t csd;
 
-void setup() {
-  
+int d0State = 1, d0LastState = 1, d1State = 0, d1LastState = 0, d2State = 0, d2LastState = 0;
 
+void setup() {
   Serial.begin(9600);
   while(!Serial) {
     delay(10);
   }
-  Serial.println(F("SmarMi initializing"));
+  // entire boot sequence should be
+  // turn on both displays, turn off backlights, load initialization image, turn on backlight
+  // that means the initialization image needs to be stored as a variable somehow. We'll figure it out
+  // then we initialize the onboard flash
+  // then we check the root directory of the onboard flash for a file (smarmi.txt?)
+  // if we have one, read it and look for the images to load
+  // if we don't have one we'll check to see if we can go into file sd card browser mode
+  Serial.print(F("SmarMi initializing"));
+  pinMode(0, INPUT_PULLUP);
+  pinMode(1, INPUT);
+  pinMode(2, INPUT);
   initDisplays();
+  Serial.print(F(" ."));
+  initFlash();
+  Serial.print(F(" ."));
   initSD();
+  Serial.print(F(" ."));
+  Serial.print("\r\n");
 
   Serial.println(F("Initialized"));
 
@@ -62,6 +82,19 @@ void initDisplays() {
   secondary.init(135, 240); // Init secondary display
   secondary.setRotation(2);
   secondary.fillScreen(ST77XX_BLACK);
+}
+
+void initFlash() {
+  // checking to see if we have access to on-board flash memory
+  Serial.print("Starting up onboard QSPI Flash...");
+  onboardFlash.begin();
+  Serial.println("Done");
+  Serial.println("Onboard Flash information");
+  Serial.print("JEDEC ID: 0x");
+  Serial.println(onboardFlash.getJEDECID(), HEX);
+  Serial.print("Flash size: ");
+  Serial.print(onboardFlash.size() / 1024);
+  Serial.println(" KB");
 }
 
 void initSD() {
@@ -102,7 +135,46 @@ void initSD() {
 
 }
 
+void getButtonState() {
+  d0State = digitalRead(0);
+  if (d0State != d0LastState) {
+    // d0 button was toggled
+    if (d0State == 0) {
+      Serial.println(F("d0 button is pressed down"));
+    } else {
+      Serial.println(F("d0 button is released"));
+    }
+  }
+  d1State = digitalRead(1);
+  if (d1State != d1LastState) {
+    // d0 button was toggled
+    if (d1State == 1) {
+      Serial.println(F("d1 button is pressed down"));
+    } else {
+      Serial.println(F("d1 button is released"));
+    }
+  }
+  d2State = digitalRead(2);
+  if (d2State != d2LastState) {
+    // d0 button was toggled
+    if (d2State == 1) {
+      Serial.println(F("d2 button is pressed down"));
+    } else {
+      Serial.println(F("d2 button is released"));
+    }
+  }
+  d0LastState = d0State;
+  d1LastState = d1State;
+  d2LastState = d2State;
+  // d1State = digitalRead(1);
+  // d2State = digitalRead(2);
+  // states this can return
+  // click
+  // long click
+  // long hold
+}
+
 void loop() {
   // put your main code here, to run repeatedly:
-
+  getButtonState();
 }
