@@ -27,7 +27,7 @@ int32_t              width  = 0, // BMP image dimensions
 
 csd_t csd;
 
-int d0State = 1, d0LastState = 1, d1State = 0, d1LastState = 0, d2State = 0, d2LastState = 0;
+Button interface[] = {Button(true, 0), Button(false, 1), Button(false, 2)};
 
 void setup() {
   Serial.begin(9600);
@@ -80,7 +80,7 @@ void initDisplays() {
   primary.fillScreen(ST77XX_BLACK);
   // initialize the second tft
   secondary.init(135, 240); // Init secondary display
-  secondary.setRotation(2);
+  secondary.setRotation(0);
   secondary.fillScreen(ST77XX_BLACK);
 }
 
@@ -136,42 +136,30 @@ void initSD() {
 }
 
 void getButtonState() {
-  d0State = digitalRead(0);
-  if (d0State != d0LastState) {
-    // d0 button was toggled
-    if (d0State == 0) {
-      Serial.println(F("d0 button is pressed down"));
-    } else {
-      Serial.println(F("d0 button is released"));
-    }
+  ButtonAction d0State = interface[0].GetState();
+  ButtonAction d1State = interface[1].GetState();
+  ButtonAction d2State = interface[2].GetState();
+  printButtonState(d0State, '0');
+  printButtonState(d1State, '1');
+  printButtonState(d2State, '2');
+}
+
+void printButtonState(ButtonAction state, char button) {
+
+  switch (state) {
+    case SHORT_CLICK:
+      Serial.print(button);
+      Serial.print(" clicked\r\n ");
+      break;
+    case LONG_CLICK:
+      Serial.print(button);
+      Serial.print(" long clicked\r\n ");
+      break;
+    case LONG_HOLD:
+      Serial.print(button);
+      Serial.print(" long hold\r\n ");
+      break;
   }
-  d1State = digitalRead(1);
-  if (d1State != d1LastState) {
-    // d0 button was toggled
-    if (d1State == 1) {
-      Serial.println(F("d1 button is pressed down"));
-    } else {
-      Serial.println(F("d1 button is released"));
-    }
-  }
-  d2State = digitalRead(2);
-  if (d2State != d2LastState) {
-    // d0 button was toggled
-    if (d2State == 1) {
-      Serial.println(F("d2 button is pressed down"));
-    } else {
-      Serial.println(F("d2 button is released"));
-    }
-  }
-  d0LastState = d0State;
-  d1LastState = d1State;
-  d2LastState = d2State;
-  // d1State = digitalRead(1);
-  // d2State = digitalRead(2);
-  // states this can return
-  // click
-  // long click
-  // long hold
 }
 
 void loop() {
