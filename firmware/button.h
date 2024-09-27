@@ -1,16 +1,17 @@
 #ifndef button_h
 #define button_h
-#include "Arduino.h"
 
-#define BOUNCE_DELAY = 50UL;
-#define CLICK_THRESHOLD = 500UL;
-#define HOLD_THRESHOLD = 2000UL;
+#include <Arduino.h>
+
+#define BOUNCE_DELAY 50UL
+#define HOLD_THRESHOLD 2000UL
 
 enum ButtonAction {
   NO_ACTION,
-  SHORT_CLICK,
-  LONG_CLICK,
-  LONG_HOLD
+  PRESS,
+  RELEASE,
+  LONG_HOLD_START,
+  LONG_HOLD_RELEASE
 };
 
 class Button {
@@ -19,6 +20,7 @@ class Button {
     Button(bool, int);
     ButtonAction GetState(void);
     void init(void);
+    bool isHeld(void) { return _isHeld; }
   private:
     bool _invert;
     int _pin;
@@ -27,6 +29,5 @@ class Button {
     int _lastState;
     unsigned long _lastDebounceTime;
 };
-
 
 #endif

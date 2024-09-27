@@ -5,13 +5,14 @@
 #include <Adafruit_SPIFlash.h>    // SPI / QSPI flash library
 #include <Adafruit_ImageReader.h> // Image-reading functions
 
-#include "classes/button.h" // custom button object
+#include "button.h" // custom button object
 
 #define USE_SD_CARD
 #define SD_CS    10  // SD card select pin
 
 // displays
 Adafruit_ST7789 primary = Adafruit_ST7789(TFT_CS, TFT_DC, TFT_RST);
+// this display doesn't seem to be working. try some different pins maybe? It worked at one time
 Adafruit_ST7789 secondary = Adafruit_ST7789(T5, T6, T9);
 // onboard flash
 Adafruit_FlashTransport_ESP32 flashTransport;
@@ -28,6 +29,7 @@ int32_t              width  = 0, // BMP image dimensions
 csd_t csd;
 
 Button interface[] = {Button(true, 0), Button(false, 1), Button(false, 2)};
+ButtonAction state[] = {NO_ACTION, NO_ACTION, NO_ACTION};
 
 void setup() {
   Serial.begin(9600);
@@ -42,14 +44,14 @@ void setup() {
   // if we have one, read it and look for the images to load
   // if we don't have one we'll check to see if we can go into file sd card browser mode
   Serial.print(F("SmarMi initializing"));
-  pinMode(0, INPUT_PULLUP);
-  pinMode(1, INPUT);
-  pinMode(2, INPUT);
+  interface[0].init();
+  interface[1].init();
+  interface[2].init();
   initDisplays();
   Serial.print(F(" ."));
-  initFlash();
+  // initFlash();
   Serial.print(F(" ."));
-  initSD();
+  // initSD();
   Serial.print(F(" ."));
   Serial.print("\r\n");
 
@@ -75,13 +77,13 @@ void initDisplays() {
   // can use an analog pin for this since it takes PWM?
   delay(10);
   // initialize the onboard tft
-  primary.init(135, 240); // Init ST7789 240x135  
-  primary.setRotation(0);
-  primary.fillScreen(ST77XX_BLACK);
+  // primary.init(135, 240); // Init ST7789 240x135  
+  // primary.setRotation(0);
+  // primary.fillScreen(ST77XX_GREEN);
   // initialize the second tft
   secondary.init(135, 240); // Init secondary display
   secondary.setRotation(0);
-  secondary.fillScreen(ST77XX_BLACK);
+  secondary.fillScreen(ST77XX_GREEN);
 }
 
 void initFlash() {
@@ -101,63 +103,65 @@ void initSD() {
   ImageReturnCode stat; // Status from image-reading functions
   if(!SD.begin(SD_CS, SD_SCK_MHZ(10))) { // Breakouts require 10 MHz limit due to longer wires
     Serial.println(F("SD begin() failed"));
-    for(;;); // Fatal error, do not continue
+  } else {
+    Serial.println(F("OK!"));
+    SD.card()->readCSD(&csd);
+    switch (SD.card()->type()) {
+      case SD_CARD_TYPE_SD1:
+        Serial.println(F("SD1"));
+        break;
+
+      case SD_CARD_TYPE_SD2:
+        Serial.println(F("SD2"));
+        break;
+
+      case SD_CARD_TYPE_SDHC:
+        if (csd.capacity() < 70000000) {
+          Serial.println(F("SDHC"));
+        } else {
+          Serial.println(F("SDXC"));
+        }
+        break;
+
+      default:
+        Serial.println(F("OOPS"));
+    }
+    Serial.print(F("Loading minerva.bmp to screen..."));
+    stat = reader.drawBMP("/minerva.bmp", primary, 0, 0);
+    reader.printStatus(stat);   // How'd we do?
   }
-  Serial.println(F("OK!"));
-  SD.card()->readCSD(&csd);
-  switch (SD.card()->type()) {
-    case SD_CARD_TYPE_SD1:
-      Serial.println(F("SD1"));
-      break;
 
-    case SD_CARD_TYPE_SD2:
-      Serial.println(F("SD2"));
-      break;
-
-    case SD_CARD_TYPE_SDHC:
-      if (csd.capacity() < 70000000) {
-        Serial.println(F("SDHC"));
-      } else {
-        Serial.println(F("SDXC"));
-      }
-      break;
-
-    default:
-      Serial.println(F("OOPS"));
-  }
-
-
-  Serial.print(F("Loading minerva.bmp to screen..."));
-  stat = reader.drawBMP("/minerva.bmp", primary, 0, 0);
-  reader.printStatus(stat);   // How'd we do?
-  stat = reader.drawBMP("/minerva.bmp", secondary, 0, 0);
-  reader.printStatus(stat);
-
+  
+  // stat = reader.drawBMP("/minerva.bmp", secondary, 0, 0);
+  // reader.printStatus(stat);
 }
 
 void getButtonState() {
-  ButtonAction d0State = interface[0].GetState();
-  ButtonAction d1State = interface[1].GetState();
-  ButtonAction d2State = interface[2].GetState();
-  printButtonState(d0State, '0');
-  printButtonState(d1State, '1');
-  printButtonState(d2State, '2');
+  state[0] = interface[0].GetState();
+  state[1] = interface[1].GetState();
+  state[2] = interface[2].GetState();
+  printButtonState(state[0], '0');
+  printButtonState(state[1], '1');
+  printButtonState(state[2], '2');
 }
 
 void printButtonState(ButtonAction state, char button) {
-
   switch (state) {
-    case SHORT_CLICK:
+    case PRESS:
       Serial.print(button);
-      Serial.print(" clicked\r\n ");
+      Serial.print(" pressed\r\n");
       break;
-    case LONG_CLICK:
+    case RELEASE:
       Serial.print(button);
-      Serial.print(" long clicked\r\n ");
+      Serial.print(" released\r\n");
       break;
-    case LONG_HOLD:
+    case LONG_HOLD_START:
       Serial.print(button);
-      Serial.print(" long hold\r\n ");
+      Serial.print(" long hold start\r\n");
+      break;
+    case LONG_HOLD_RELEASE:
+      Serial.print(button);
+      Serial.print(" long hold release\r\n");
       break;
   }
 }
@@ -165,4 +169,7 @@ void printButtonState(ButtonAction state, char button) {
 void loop() {
   // put your main code here, to run repeatedly:
   getButtonState();
+  if (state[0] == PRESS) {
+    initSD();
+  }
 }
