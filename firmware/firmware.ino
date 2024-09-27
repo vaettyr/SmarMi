@@ -13,6 +13,7 @@
 // displays
 Adafruit_ST7789 primary = Adafruit_ST7789(TFT_CS, TFT_DC, TFT_RST);
 // this display doesn't seem to be working. try some different pins maybe? It worked at one time
+// maybe just need to explictly set the pin mode on them? my best guess there, I don't see that init actually does it
 Adafruit_ST7789 secondary = Adafruit_ST7789(T5, T6, T9);
 // onboard flash
 Adafruit_FlashTransport_ESP32 flashTransport;
@@ -81,6 +82,7 @@ void initDisplays() {
   // primary.setRotation(0);
   // primary.fillScreen(ST77XX_GREEN);
   // initialize the second tft
+  // I bet this is because I'm not setting the pin modes?
   secondary.init(135, 240); // Init secondary display
   secondary.setRotation(0);
   secondary.fillScreen(ST77XX_GREEN);
