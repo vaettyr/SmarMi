@@ -11,5 +11,5 @@
 // initializing screen
 // default display (show loaded images)
 // bluetooth pairing
-// wifi connect (?)
+// wifi connect (can expose a page user can interact with?)
 // being read as usb msc

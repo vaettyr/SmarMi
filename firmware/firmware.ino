@@ -5,6 +5,8 @@
 #include <Adafruit_SPIFlash.h>    // SPI / QSPI flash library
 #include <Adafruit_ImageReader.h> // Image-reading functions
 
+#include <Fonts/FreeSansBold12pt7b.h> // mono font
+
 #include "button.h" // custom button object
 
 #define USE_SD_CARD
@@ -12,9 +14,7 @@
 
 // displays
 Adafruit_ST7789 primary = Adafruit_ST7789(TFT_CS, TFT_DC, TFT_RST);
-// this display doesn't seem to be working. try some different pins maybe? It worked at one time
-// maybe just need to explictly set the pin mode on them? my best guess there, I don't see that init actually does it
-Adafruit_ST7789 secondary = Adafruit_ST7789(T5, T6, T9);
+// Adafruit_ST7789 secondary = Adafruit_ST7789(T5, T6, T9);
 // onboard flash
 Adafruit_FlashTransport_ESP32 flashTransport;
 Adafruit_SPIFlash onboardFlash(&flashTransport);
@@ -78,14 +78,14 @@ void initDisplays() {
   // can use an analog pin for this since it takes PWM?
   delay(10);
   // initialize the onboard tft
-  // primary.init(135, 240); // Init ST7789 240x135  
-  // primary.setRotation(0);
-  // primary.fillScreen(ST77XX_GREEN);
+  primary.init(135, 240); // Init ST7789 240x135  
+  primary.setRotation(0);
+  primary.fillScreen(ST77XX_BLACK);
   // initialize the second tft
   // I bet this is because I'm not setting the pin modes?
-  secondary.init(135, 240); // Init secondary display
-  secondary.setRotation(0);
-  secondary.fillScreen(ST77XX_GREEN);
+  // secondary.init(135, 240); // Init secondary display
+  // secondary.setRotation(0);
+  // secondary.fillScreen(ST77XX_GREEN);
 }
 
 void initFlash() {
@@ -128,9 +128,12 @@ void initSD() {
       default:
         Serial.println(F("OOPS"));
     }
-    Serial.print(F("Loading minerva.bmp to screen..."));
-    stat = reader.drawBMP("/minerva.bmp", primary, 0, 0);
+    Serial.print(F("Loading logo.bmp to screen..."));
+    stat = reader.drawBMP("/logo.bmp", primary, 23, 23);
     reader.printStatus(stat);   // How'd we do?
+    primary.setFont(&FreeSansBold12pt7b);
+    primary.setCursor(36, 152);
+    primary.println("SmarMi");
   }
 
   
