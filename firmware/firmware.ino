@@ -10,11 +10,12 @@
 #include "button.h" // custom button object
 
 #define USE_SD_CARD
-#define SD_CS    10  // SD card select pin
+#define SD_CS    5  // SD card select pin
 
 // displays
+// it's a shitty breadboard. If something's not working, check the wires
 Adafruit_ST7789 primary = Adafruit_ST7789(TFT_CS, TFT_DC, TFT_RST);
-// Adafruit_ST7789 secondary = Adafruit_ST7789(T5, T6, T9);
+Adafruit_ST7789 secondary = Adafruit_ST7789(10, 6, 9);
 // onboard flash
 Adafruit_FlashTransport_ESP32 flashTransport;
 Adafruit_SPIFlash onboardFlash(&flashTransport);
@@ -52,7 +53,7 @@ void setup() {
   Serial.print(F(" ."));
   // initFlash();
   Serial.print(F(" ."));
-  // initSD();
+  initSD();
   Serial.print(F(" ."));
   Serial.print("\r\n");
 
@@ -83,9 +84,9 @@ void initDisplays() {
   primary.fillScreen(ST77XX_BLACK);
   // initialize the second tft
   // I bet this is because I'm not setting the pin modes?
-  // secondary.init(135, 240); // Init secondary display
-  // secondary.setRotation(0);
-  // secondary.fillScreen(ST77XX_GREEN);
+  secondary.init(135, 240); // Init secondary display
+  secondary.setRotation(0);
+  secondary.fillScreen(ST77XX_BLACK);
 }
 
 void initFlash() {
@@ -175,6 +176,12 @@ void loop() {
   // put your main code here, to run repeatedly:
   getButtonState();
   if (state[0] == PRESS) {
-    initSD();
+    ImageReturnCode stat;
+    Serial.print(F("Loading minerva to screen 1"));
+    stat = reader.drawBMP("/minerva.bmp", primary, 0, 0);
+    reader.printStatus(stat);
+    Serial.print(F("Loading minerva to screen 2"));
+    stat = reader.drawBMP("/minerva.bmp", secondary, 0, 0);
+    reader.printStatus(stat);
   }
 }
