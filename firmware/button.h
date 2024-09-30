@@ -15,7 +15,6 @@ enum ButtonAction {
 };
 
 class Button {
-// class code goes here
   public:
     Button(bool, int);
     ButtonAction GetState(void);

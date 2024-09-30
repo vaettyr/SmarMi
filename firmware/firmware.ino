@@ -19,9 +19,11 @@ Adafruit_ST7789 secondary = Adafruit_ST7789(10, 6, 9);
 // onboard flash
 Adafruit_FlashTransport_ESP32 flashTransport;
 Adafruit_SPIFlash onboardFlash(&flashTransport);
-// external SD card
+// File Volume on the onboard flash
+FatVolume onboardFs; // Onboard flash file system;
+Adafruit_ImageReader flashReader(onboardFs);
+
 SdFat                SD;         // SD card filesystem
-// image file reader (might need to read from different places. Create as needed?)
 Adafruit_ImageReader reader(SD); // Image-reader object, pass in SD filesys
 
 Adafruit_Image       img;        // An image loaded into RAM
@@ -51,7 +53,7 @@ void setup() {
   interface[2].init();
   initDisplays();
   Serial.print(F(" ."));
-  // initFlash();
+  initFlash();
   Serial.print(F(" ."));
   initSD();
   Serial.print(F(" ."));
@@ -91,6 +93,7 @@ void initDisplays() {
 
 void initFlash() {
   // checking to see if we have access to on-board flash memory
+  ImageReturnCode stat;
   Serial.print("Starting up onboard QSPI Flash...");
   onboardFlash.begin();
   Serial.println("Done");
@@ -100,6 +103,13 @@ void initFlash() {
   Serial.print("Flash size: ");
   Serial.print(onboardFlash.size() / 1024);
   Serial.println(" KB");
+  if(!onboardFs.begin(&onboardFlash)) {
+    Serial.println("Error initializing onboard flash filesystem");
+  } else {
+    Serial.print(F("Loading logo.bmp to second screen..."));
+    stat = flashReader.drawBMP("/logo.bmp", secondary, 23, 23);
+    flashReader.printStatus(stat);
+  }
 }
 
 void initSD() {
@@ -133,7 +143,7 @@ void initSD() {
     stat = reader.drawBMP("/logo.bmp", primary, 23, 23);
     reader.printStatus(stat);   // How'd we do?
     primary.setFont(&FreeSansBold12pt7b);
-    primary.setCursor(36, 152);
+    primary.setCursor(22, 152);
     primary.println("SmarMi");
   }
 

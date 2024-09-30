@@ -1,0 +1,38 @@
+{
+  "name": "smarmi-app",
+  "version": "1.0.0",
+  "description": "A companion app to interface with SmarMi",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vaettyr/SmarMi.git"
+  },
+  "author": "Nate Bolt",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/vaettyr/SmarMi/issues"
+  },
+  "homepage": "https://github.com/vaettyr/SmarMi#readme",
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^6.26.2"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.10",
+    "@types/react-router": "^5.1.20",
+    "@types/react-router-dom": "^5.3.3",
+    "@types/web-bluetooth": "^0.0.20",
+    "eslint": "^8.57.1",
+    "eslint-config-prettier": "^9.1.0",
+    "eslint-plugin-import": "^2.30.0",
+    "eslint-plugin-prettier": "^5.2.1",
+    "eslint-plugin-react": "^7.37.0",
+    "prettier": "^3.3.3",
+    "tsx": "^4.19.1",
+    "typescript": "^5.6.2"
+  }
+}
