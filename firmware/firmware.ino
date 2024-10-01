@@ -10,12 +10,23 @@
 #include "button.h" // custom button object
 
 #define USE_SD_CARD
-#define SD_CS    5  // SD card select pin
+#define SD_CS    13  // SD card select pin
 
+
+// PIN 13 IS SD CS
+#define EXT_TFT_DC 12
+// 12 is TFT EXT DC
+#define EXT_TFT_RST 11
+// 11 is EXT TFT RST
+#define EXT_TFT_CS 9
+// 9 is EXT TFT CS
+// A5 is EXT TFT Brightness
+// A4 is enable the entire external TFT/SD
 // displays
 // it's a shitty breadboard. If something's not working, check the wires
 Adafruit_ST7789 primary = Adafruit_ST7789(TFT_CS, TFT_DC, TFT_RST);
-Adafruit_ST7789 secondary = Adafruit_ST7789(10, 6, 9);
+// Adafruit_ST7789 secondary = Adafruit_ST7789(10, 6, 9); // old pins
+Adafruit_ST7789 secondary = Adafruit_ST7789(EXT_TFT_CS, EXT_TFT_DC, EXT_TFT_RST);
 // onboard flash
 Adafruit_FlashTransport_ESP32 flashTransport;
 Adafruit_SPIFlash onboardFlash(&flashTransport);
@@ -48,6 +59,8 @@ void setup() {
   // if we have one, read it and look for the images to load
   // if we don't have one we'll check to see if we can go into file sd card browser mode
   Serial.print(F("SmarMi initializing"));
+
+
   interface[0].init();
   interface[1].init();
   interface[2].init();
@@ -72,6 +85,11 @@ void initDisplays() {
   pinMode(TFT_BACKLITE, OUTPUT);
   digitalWrite(TFT_BACKLITE, HIGH);
   // set this for secondary backlite also
+  pinMode(A5, OUTPUT); // External TFT brightness
+  digitalWrite(A5, HIGH);
+
+  pinMode(A4, OUTPUT); // External TFT and SD Enable
+  digitalWrite(A4, HIGH);
 
   // turn on the TFT / I2C power supply
   pinMode(TFT_I2C_POWER, OUTPUT);
@@ -87,7 +105,7 @@ void initDisplays() {
   // initialize the second tft
   // I bet this is because I'm not setting the pin modes?
   secondary.init(135, 240); // Init secondary display
-  secondary.setRotation(0);
+  secondary.setRotation(2); // flipping for now because of how it's mounted on protoboard
   secondary.fillScreen(ST77XX_BLACK);
 }
 
