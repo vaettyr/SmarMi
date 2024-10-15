@@ -48,8 +48,6 @@ ButtonAction Button::GetState() {
   return response;
 }
 
-// take these out of an array, that's the only difference and it's getting a weird flicker
-// what the actual fuck. I don't understand why button 1 is triggering button 2 but not the other way around
 Interface::Interface(Button b0, Button b1, Button b2) {
   _b0 = b0;
   _b1 = b1;
@@ -64,7 +62,7 @@ void Interface::init() {
   _b0.init();
   _b1.init();
   _b2.init();
-}
+};
 
 void Interface::update() {
   _state0 = _b0.GetState();
@@ -73,7 +71,7 @@ void Interface::update() {
   printState(_state0, '0');
   printState(_state1, '1');
   printState(_state2, '2');
-}
+};
 
 ButtonAction Interface::State(int button) {
   switch(button) {
@@ -83,8 +81,10 @@ ButtonAction Interface::State(int button) {
       return _state1;
     case 2:
       return _state2;
+    default:
+      return NO_ACTION;
   }
-}
+};
 
 bool Interface::isHeld(int button) {
   switch (button) {
@@ -94,8 +94,10 @@ bool Interface::isHeld(int button) {
       return _b1.isHeld();
     case 2:
       return _b2.isHeld();
+    default:
+      return false;
   }
-}
+};
 
 void Interface::printState(ButtonAction state, char button) {
   switch (state) {
@@ -116,4 +118,4 @@ void Interface::printState(ButtonAction state, char button) {
       Serial.print(" long hold release\r\n");
       break;
   }
-}
+};

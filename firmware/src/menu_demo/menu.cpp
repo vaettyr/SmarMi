@@ -29,7 +29,7 @@ bool Menu::end() {
 
 void Menu::tick() {
   if (!_isActive) return;
-  _input->update();
+
   int lastIndex = _index;
   ButtonAction b1 = _input->State(1);
   ButtonAction b2 = _input->State(2);

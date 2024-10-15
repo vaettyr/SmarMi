@@ -12,6 +12,7 @@ class Menu {
     bool begin(void);
     bool end(void);
     void tick(void);
+    bool active() { return _isActive; };
   private:
     Adafruit_ST7789* _display;
     Interface* _input;

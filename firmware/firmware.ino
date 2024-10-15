@@ -4,73 +4,78 @@
 #include <SdFat.h>                // SD card & FAT filesystem library
 #include <Adafruit_SPIFlash.h>    // SPI / QSPI flash library
 #include <Adafruit_ImageReader.h> // Image-reading functions
-#include <Adafruit_TinyUSB.h>     // USB functionalty to register as MSC
+// #include <Adafruit_TinyUSB.h>     // USB functionalty to register as MSC
 
 #include <Fonts/FreeSansBold12pt7b.h> // mono font
 
-#include ".\\menu\\interface.h" // custom interface object
-#include ".\\usb\\usb_drive.h" // usb mass storage object
+#include <WebServer.h>
+#include <WiFi.h>
 
+#include "src/menu_demo/menu.h" // custom interface object
+#include "src/usb/usb_drive.h" // usb mass storage object
+
+// actual value is 8 - A5
+// actual value is 14 - A4
 #define USE_SD_CARD
-#define SD_CS    13  // SD card select pin
+#define SD_CS    13
+#define EXT_TFT_BACKLITE A5 
+#define EXT_TFT_I2C_POWER A4 
 #define EXT_TFT_DC 12
 #define EXT_TFT_RST 11
 #define EXT_TFT_CS 9
-#define EXT_TFT_BACKLITE A5 // actual value is 8
-#define EXT_TFT_I2C_POWER A4 // actual value is 14
 
-Adafruit_ST7789 primary = Adafruit_ST7789(TFT_CS, TFT_DC, TFT_RST);
-Adafruit_ST7789 secondary = Adafruit_ST7789(EXT_TFT_CS, EXT_TFT_DC, EXT_TFT_RST);
+// Adafruit_ST7789 primary = Adafruit_ST7789(TFT_CS, TFT_DC, TFT_RST);
+// Adafruit_ST7789 secondary = Adafruit_ST7789(EXT_TFT_CS, EXT_TFT_DC, EXT_TFT_RST);
 
 Adafruit_FlashTransport_ESP32 flashTransport;
 Adafruit_SPIFlash onboardFlash(&flashTransport);
-
-USBDrive onboardPartition = USBDrive(&onboardFlash);
-
 FatVolume onboardFs; // Onboard flash file system;
-Adafruit_ImageReader flashReader(onboardFs);
+// this usb drive is going to need some work still
+USB_Drive onboardPartition = USB_Drive(&onboardFlash);
 
-SdFat                SD;         // SD card filesystem
-Adafruit_ImageReader reader(SD); // Image-reader object, pass in SD filesys
-bool hasSD = false;
+// Adafruit_ImageReader flashReader(onboardFs);
+
+// SdFat                SD;         // SD card filesystem
+// Adafruit_ImageReader reader(SD); // Image-reader object, pass in SD filesys
+// bool hasSD = false;
 
 csd_t csd;
+
+Interface interface = Interface(Button(0, true), Button(1), Button(2));
+// Menu menu = Menu(&primary, &interface);
+
+WebServer server(80);
 
 void setup() {
   Serial.begin(9600);
   while(!Serial) {
     delay(10);
   }
-  Serial.print(F("SmarMi initializing"));
-
-  // entire boot sequence should be
-  // turn on both displays, turn off backlights, load initialization image, turn on backlight
-  // that means the initialization image needs to be stored as a variable somehow. We'll figure it out
-  // then we initialize the onboard flash
-  // then we check the root directory of the onboard flash for a file (smarmi.txt?)
-  // if we have one, read it and look for the images to load
-  // if we don't have one we'll check to see if we can go into file sd card browser mode
+  Serial.println(F("SmarMi initializing"));
   
-  initDisplays();
+  // initDisplays();
+  onboardFlash.begin();
+  onboardFs.begin(&onboardFlash);
+  initWifi();
 
-  if (!onboardPartition.init()) {
-    Serial.println(F("Failed to mount device as USB Mass Storage Device"));
-    Serial.print(F("Are you sure the onboard flash is formatted?"));
-    primary.fillScreen(ST77XX_RED);
-    secondary.fillScreen(ST77XX_RED);
-    while(1);
-  }
-
-  if (flashReader.drawBMP("/logo.bmp", primary, 23, 23)) {
+/*
+  ImageReturnCode stat = flashReader.drawBMP("/sys/logo.bmp", primary, 23, 23);
+  if ( stat != IMAGE_SUCCESS) {
+    flashReader.printStatus(stat);
     Serial.println(F("Failed to load initialization logo"));
     Serial.println(F("Are you sure the necessary boot files are loaded?"));
   }
-  reader.drawBMP("/logo.bmp", secondary, 23, 23);
+
+  flashReader.drawBMP("/sys/logo.bmp", secondary, 23, 23);
   primary.setFont(&FreeSansBold12pt7b);
   primary.setCursor(22, 152);
   primary.println("SmarMi");
 
   hasSD = SD.begin(SD_CS, SD_SCK_MHZ(10));
+ */
+  interface.init();
+
+  onboardPartition.init();
 
   Serial.println(F("Initialized"));
 
@@ -80,6 +85,57 @@ void setup() {
 
 }
 
+void initWifi() {
+  File32 config = onboardFs.open("wifi.txt");
+  char line[41]; // 32 char max for ssid and password + 9 for "password="
+  String parsed;
+  String password;
+  String ssid;
+  if (!config) {
+    Serial.println("No config file found");
+    return;
+  }
+  while (config.available()) {
+    Serial.print("Reading line: ");
+    int n = config.fgets(line, sizeof(line));
+    if (n <= 0) {
+      Serial.println(F("Failed to read line"));
+    } else if (line[n-1] != '\n' && n == (sizeof(line) - 1)) {
+      Serial.println(F("Line too long"));
+    } else {
+      parsed = line;
+      if (parsed.startsWith("ssid=")) {
+        ssid = parsed.substring(5);
+        Serial.print(F("SSID: "));
+        Serial.println(ssid);
+      } else if(parsed.startsWith("password=")) {
+        password = parsed.substring(9);
+        Serial.print(F("Password: "));
+        Serial.println(password);
+      }
+    }
+  }
+  config.close();
+  if (sizeof(password) == 0 || sizeof(ssid) == 0) {
+    return;
+  }
+  WiFi.setHostname("smarmi");
+  Serial.print("Connecting to wifi...");
+  WiFi.begin(ssid, password);
+  uint8_t status = WiFi.waitForConnectResult();
+  Serial.println(status);
+  if (status == WL_CONNECTED) {
+    server.on("/", HTTP_GET, handleRequest);
+    server.begin();
+  }
+}
+
+void handleRequest() {
+  String response = "OK";
+  server.send(200, "text/html; charset=utf-8", response);
+}
+
+/*
 void initDisplays() {
   // turn on backlite
   pinMode(TFT_BACKLITE, OUTPUT);
@@ -103,47 +159,16 @@ void initDisplays() {
   secondary.setRotation(2); // flipping for now because of how it's mounted on protoboard
   secondary.fillScreen(ST77XX_BLACK);
 }
-
-void getButtonState() {
-  state[0] = interface[0].GetState();
-  state[1] = interface[1].GetState();
-  state[2] = interface[2].GetState();
-  printButtonState(state[0], '0');
-  printButtonState(state[1], '1');
-  printButtonState(state[2], '2');
-}
-
-void printButtonState(ButtonAction state, char button) {
-  switch (state) {
-    case PRESS:
-      Serial.print(button);
-      Serial.print(" pressed\r\n");
-      break;
-    case RELEASE:
-      Serial.print(button);
-      Serial.print(" released\r\n");
-      break;
-    case LONG_HOLD_START:
-      Serial.print(button);
-      Serial.print(" long hold start\r\n");
-      break;
-    case LONG_HOLD_RELEASE:
-      Serial.print(button);
-      Serial.print(" long hold release\r\n");
-      break;
-  }
-}
-
+*/
 void loop() {
-  // put your main code here, to run repeatedly:
-  getButtonState();
-  if (state[0] == PRESS) {
-    ImageReturnCode stat;
-    Serial.print(F("Loading minerva to screen 1"));
-    stat = reader.drawBMP("/minerva.bmp", primary, 0, 0);
-    reader.printStatus(stat);
-    Serial.print(F("Loading minerva to screen 2"));
-    stat = reader.drawBMP("/minerva.bmp", secondary, 0, 0);
-    reader.printStatus(stat);
+  interface.update();
+  server.handleClient();
+  /*
+  if (!menu.active()){
+    if (interface.State(0) == LONG_HOLD_START) {
+      menu.begin();
+    }
   }
+  menu.tick();
+  */
 }
